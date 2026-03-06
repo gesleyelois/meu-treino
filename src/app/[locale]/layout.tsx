@@ -2,6 +2,7 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import BottomNav from "@/components/BottomNav";
+import TopHeader from "@/components/TopHeader";
 
 export default async function LocaleLayout({
     children,
@@ -19,13 +20,14 @@ export default async function LocaleLayout({
     const messages = (await import(`../../../messages/${locale}.json`)).default;
 
     return (
-        <html lang={locale} className="dark">
+        <html lang={locale} className="dark" suppressHydrationWarning>
             <head>
                 <link rel="apple-touch-icon" href="/icons/icon-192.png" />
             </head>
-            <body className="font-sans antialiased">
+            <body className="font-sans antialiased text-zinc-100 bg-zinc-950">
                 <NextIntlClientProvider locale={locale} messages={messages}>
-                    <main className="min-h-dvh pb-20">{children}</main>
+                    <TopHeader />
+                    <main className="min-h-dvh pb-20 pt-14">{children}</main>
                     <BottomNav />
                 </NextIntlClientProvider>
             </body>

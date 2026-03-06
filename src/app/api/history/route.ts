@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth-check";
 
 // GET /api/history — return all workout logs with exercise details
 export async function GET() {
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     try {
         const logs = await prisma.workoutLog.findMany({
+            where: { workoutSplit: { userId: user.id } },
             include: {
                 workoutSplit: true,
                 exerciseLogs: {

@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth-check";
 
 // GET /api/splits — list all splits
 // POST /api/splits — create a new split with exercises
 export async function GET() {
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     try {
         const splits = await prisma.workoutSplit.findMany({
+            where: { userId: user.id },
             include: {
                 exercises: {
                     include: { exercise: true },
@@ -22,15 +27,16 @@ export async function GET() {
 }
 
 interface ExerciseInput {
-    name: string;
-    muscleGroup: string;
-    mediaUrl?: string;
+    exerciseId: string;
     sets: number;
     targetReps: number;
     restTimeSeconds: number;
 }
 
 export async function POST(request: Request) {
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     try {
         const body = await request.json();
         const { name, description, exercises } = body as {
@@ -48,23 +54,16 @@ export async function POST(request: Request) {
 
         const split = await prisma.$transaction(async (tx) => {
             const ws = await tx.workoutSplit.create({
-                data: { name, description },
+                data: { name, description, userId: user.id },
             });
 
             for (let i = 0; i < exercises.length; i++) {
                 const ex = exercises[i];
-                const exercise = await tx.exercise.create({
-                    data: {
-                        name: ex.name,
-                        muscleGroup: ex.muscleGroup,
-                        mediaUrl: ex.mediaUrl || null,
-                    },
-                });
 
                 await tx.workoutExercise.create({
                     data: {
                         workoutSplitId: ws.id,
-                        exerciseId: exercise.id,
+                        exerciseId: ex.exerciseId,
                         sets: ex.sets,
                         targetReps: ex.targetReps,
                         restTimeSeconds: ex.restTimeSeconds,

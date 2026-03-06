@@ -7,8 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model AppUser {
+  id        String         @id
+  role      String         @default("USER") // 'USER' | 'ADMIN'
+  splits    WorkoutSplit[]
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@map("app_users")
+}
+
 model WorkoutSplit {
   id          String            @id @default(cuid())
+  userId      String            @map("user_id")
+  user        AppUser           @relation(fields: [userId], references: [id], onDelete: Cascade)
   name        String
   description String?
   exercises   WorkoutExercise[]

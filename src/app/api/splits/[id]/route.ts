@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth-check";
 
 interface ExerciseInput {
-    name: string;
-    muscleGroup: string;
-    mediaUrl?: string;
+    exerciseId: string;
     sets: number;
     targetReps: number;
     restTimeSeconds: number;
@@ -15,11 +14,14 @@ export async function GET(
     _request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     const { id } = await params;
 
     try {
-        const split = await prisma.workoutSplit.findUnique({
-            where: { id },
+        const split = await prisma.workoutSplit.findFirst({
+            where: { id, userId: user.id },
             include: {
                 exercises: {
                     include: { exercise: true },
@@ -44,9 +46,18 @@ export async function PUT(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     const { id } = await params;
 
     try {
+        // Enforce ownership
+        const existing = await prisma.workoutSplit.findUnique({ where: { id } });
+        if (!existing || existing.userId !== user.id) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const body = await request.json();
         const { name, description, exercises } = body as {
             name: string;
@@ -73,35 +84,20 @@ export async function PUT(
                 where: { workoutSplitId: id },
             });
 
-            // Delete old exercises (only those not referenced elsewhere)
-            await tx.exercise.deleteMany({
-                where: {
-                    id: { in: oldExerciseIds },
-                    workouts: { none: {} },
-                },
-            });
-
             // Update split info
             await tx.workoutSplit.update({
                 where: { id },
                 data: { name, description },
             });
 
-            // Create new exercises
+            // Create new workout exercises pointing to the catalog
             for (let i = 0; i < exercises.length; i++) {
                 const ex = exercises[i];
-                const exercise = await tx.exercise.create({
-                    data: {
-                        name: ex.name,
-                        muscleGroup: ex.muscleGroup,
-                        mediaUrl: ex.mediaUrl || null,
-                    },
-                });
 
                 await tx.workoutExercise.create({
                     data: {
                         workoutSplitId: id,
-                        exerciseId: exercise.id,
+                        exerciseId: ex.exerciseId,
                         sets: ex.sets,
                         targetReps: ex.targetReps,
                         restTimeSeconds: ex.restTimeSeconds,
@@ -133,9 +129,18 @@ export async function DELETE(
     _request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     const { id } = await params;
 
     try {
+        // Enforce ownership
+        const existing = await prisma.workoutSplit.findUnique({ where: { id } });
+        if (!existing || existing.userId !== user.id) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         // Delete related records first
         const workoutExercises = await prisma.workoutExercise.findMany({
             where: { workoutSplitId: id },

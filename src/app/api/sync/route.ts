@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth-check";
 
 interface ExerciseLogPayload {
     exerciseId: string;
@@ -16,6 +17,9 @@ interface WorkoutLogPayload {
 }
 
 export async function POST(request: Request) {
+    const { user, errorResponse } = await requireAuth();
+    if (errorResponse) return errorResponse;
+
     try {
         const { logs } = (await request.json()) as { logs: WorkoutLogPayload[] };
 
@@ -30,6 +34,12 @@ export async function POST(request: Request) {
             const created = [];
 
             for (const log of logs) {
+                // Verify ownership of the split
+                const split = await tx.workoutSplit.findUnique({ where: { id: log.workoutSplitId } });
+                if (!split || split.userId !== user.id) {
+                    throw new Error("Unauthorized or split not found");
+                }
+
                 const workoutLog = await tx.workoutLog.create({
                     data: {
                         date: new Date(log.date),

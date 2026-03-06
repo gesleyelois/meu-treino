@@ -4,22 +4,17 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { refreshCatalog } from "@/lib/sync";
 import { type CatalogSplit } from "@/lib/db";
+import ConfirmModal from "@/components/ConfirmModal";
 
 interface ExerciseForm {
-    name: string;
-    muscleGroup: string;
-    mediaUrl: string;
-    mediaFile: File | null;
+    exerciseId: string;
     sets: number;
     targetReps: number;
     restTimeSeconds: number;
 }
 
 const emptyExercise: ExerciseForm = {
-    name: "",
-    muscleGroup: "",
-    mediaUrl: "",
-    mediaFile: null,
+    exerciseId: "",
     sets: 3,
     targetReps: 12,
     restTimeSeconds: 90,
@@ -33,18 +28,28 @@ export default function ManagePage() {
     const [saving, setSaving] = useState(false);
     const [editingSplitId, setEditingSplitId] = useState<string | null>(null);
 
+    // Delete modal state
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [splitToDelete, setSplitToDelete] = useState<string | null>(null);
+
     // Form state
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [exercises, setExercises] = useState<ExerciseForm[]>([{ ...emptyExercise }]);
+    const [catalogExercises, setCatalogExercises] = useState<any[]>([]);
 
-    const loadSplits = useCallback(async () => {
+    const loadSplitsAndCatalog = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/splits");
-            if (res.ok) setSplits(await res.json());
+            const [splitsRes, catRes] = await Promise.all([
+                fetch("/api/splits"),
+                fetch("/api/admin/exercises")
+            ]);
+
+            if (splitsRes.ok) setSplits(await splitsRes.json());
+            if (catRes.ok) setCatalogExercises(await catRes.json());
         } catch {
-            // Use cached data
+            // Use cached data for splits
             const data = await refreshCatalog();
             setSplits(data);
         }
@@ -52,8 +57,8 @@ export default function ManagePage() {
     }, []);
 
     useEffect(() => {
-        loadSplits();
-    }, [loadSplits]);
+        loadSplitsAndCatalog();
+    }, [loadSplitsAndCatalog]);
 
     const resetForm = () => {
         setShowForm(false);
@@ -69,10 +74,7 @@ export default function ManagePage() {
         setDescription(split.description || "");
         setExercises(
             split.exercises.map((we) => ({
-                name: we.exercise.name,
-                muscleGroup: we.exercise.muscleGroup,
-                mediaUrl: we.exercise.mediaUrl || "",
-                mediaFile: null,
+                exerciseId: we.exerciseId,
                 sets: we.sets,
                 targetReps: we.targetReps,
                 restTimeSeconds: we.restTimeSeconds,
@@ -109,27 +111,17 @@ export default function ManagePage() {
     };
 
     const handleSubmit = async () => {
-        if (!name.trim() || exercises.length === 0 || exercises.some((e) => !e.name.trim())) return;
+        if (saving) return; // Prevent double click
+        if (!name.trim() || exercises.length === 0 || exercises.some((e) => !e.exerciseId)) return;
 
         setSaving(true);
         try {
-            // Upload any files first
-            const processedExercises = await Promise.all(
-                exercises.map(async (ex) => {
-                    let mediaUrl = ex.mediaUrl;
-                    if (ex.mediaFile) {
-                        mediaUrl = await uploadFile(ex.mediaFile);
-                    }
-                    return {
-                        name: ex.name,
-                        muscleGroup: ex.muscleGroup,
-                        mediaUrl,
-                        sets: ex.sets,
-                        targetReps: ex.targetReps,
-                        restTimeSeconds: ex.restTimeSeconds,
-                    };
-                })
-            );
+            const processedExercises = exercises.map(ex => ({
+                exerciseId: ex.exerciseId,
+                sets: ex.sets,
+                targetReps: ex.targetReps,
+                restTimeSeconds: ex.restTimeSeconds,
+            }));
 
             const url = editingSplitId ? `/api/splits/${editingSplitId}` : "/api/splits";
             const method = editingSplitId ? "PUT" : "POST";
@@ -143,7 +135,7 @@ export default function ManagePage() {
             if (res.ok) {
                 resetForm();
                 await refreshCatalog();
-                await loadSplits();
+                await loadSplitsAndCatalog();
             }
         } catch (error) {
             console.error("Failed to save split:", error);
@@ -151,14 +143,20 @@ export default function ManagePage() {
         setSaving(false);
     };
 
-    const handleDelete = async (id: string) => {
-        if (!confirm(t("deleteConfirm"))) return;
+    const handleDeleteClick = (id: string) => {
+        setSplitToDelete(id);
+        setDeleteModalOpen(true);
+    };
+
+    const executeDelete = async (id: string) => {
+        setDeleteModalOpen(false);
+        setSplitToDelete(null);
 
         try {
             const res = await fetch(`/api/splits/${id}`, { method: "DELETE" });
             if (res.ok) {
                 await refreshCatalog();
-                await loadSplits();
+                await loadSplitsAndCatalog();
             }
         } catch (error) {
             console.error("Failed to delete split:", error);
@@ -246,114 +244,19 @@ export default function ManagePage() {
                                         )}
                                     </div>
 
-                                    <input
-                                        type="text"
-                                        value={ex.name}
-                                        onChange={(e) => updateExercise(i, "name", e.target.value)}
-                                        placeholder={t("exerciseNamePlaceholder")}
-                                        className="w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 mb-2 text-sm text-zinc-100 
-                               placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
-                                    />
+                                    <select
+                                        value={ex.exerciseId}
+                                        onChange={(e) => updateExercise(i, "exerciseId", e.target.value)}
+                                        className="w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 mb-4 text-sm text-zinc-100 
+                                                   focus:outline-none focus:border-emerald-600 appearance-none"
+                                    >
+                                        <option value="" disabled>Selecione um exercício do catálogo...</option>
+                                        {catalogExercises.map(cat => (
+                                            <option key={cat.id} value={cat.id}>{cat.name} ({cat.muscleGroup})</option>
+                                        ))}
+                                    </select>
 
-                                    <div className="grid grid-cols-2 gap-2 mb-2">
-                                        <input
-                                            type="text"
-                                            value={ex.muscleGroup}
-                                            onChange={(e) => updateExercise(i, "muscleGroup", e.target.value)}
-                                            placeholder={t("muscleGroupPlaceholder")}
-                                            className="h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-zinc-100 
-                                 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
-                                        />
-                                        <div className="flex flex-col gap-1">
-                                            {/* File upload */}
-                                            <label
-                                                className="h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-zinc-100
-                                     flex items-center justify-center cursor-pointer hover:bg-zinc-700 transition-colors"
-                                            >
-                                                <span className="truncate text-xs">
-                                                    {ex.mediaFile
-                                                        ? ex.mediaFile.name
-                                                        : ex.mediaUrl
-                                                            ? "✓ " + t("preview")
-                                                            : t("uploadFile")}
-                                                </span>
-                                                <input
-                                                    type="file"
-                                                    accept=".gif,.mp4,.webm,.webp,.png,.jpg,.jpeg"
-                                                    className="hidden"
-                                                    onChange={(e) => {
-                                                        const file = e.target.files?.[0] || null;
-                                                        if (file) {
-                                                            updateExercise(i, "mediaFile", file);
-                                                            updateExercise(i, "mediaUrl", "");
-                                                        }
-                                                    }}
-                                                />
-                                            </label>
-                                        </div>
-                                    </div>
 
-                                    {/* Media preview */}
-                                    {(ex.mediaFile || ex.mediaUrl) && (
-                                        <div className="mb-2 rounded-lg overflow-hidden bg-zinc-900 border border-zinc-700/50">
-                                            {ex.mediaFile ? (
-                                                isMediaImage(ex.mediaFile.name) ? (
-                                                    /* eslint-disable-next-line @next/next/no-img-element */
-                                                    <img
-                                                        src={URL.createObjectURL(ex.mediaFile)}
-                                                        alt={t("preview")}
-                                                        className="w-full max-h-40 object-contain"
-                                                    />
-                                                ) : (
-                                                    <video
-                                                        src={URL.createObjectURL(ex.mediaFile)}
-                                                        className="w-full max-h-40 object-contain"
-                                                        autoPlay
-                                                        loop
-                                                        muted
-                                                        playsInline
-                                                    />
-                                                )
-                                            ) : ex.mediaUrl && isMediaImage(ex.mediaUrl) ? (
-                                                /* eslint-disable-next-line @next/next/no-img-element */
-                                                <img
-                                                    src={ex.mediaUrl}
-                                                    alt={t("preview")}
-                                                    className="w-full max-h-40 object-contain"
-                                                />
-                                            ) : ex.mediaUrl ? (
-                                                <video
-                                                    src={ex.mediaUrl}
-                                                    className="w-full max-h-40 object-contain"
-                                                    autoPlay
-                                                    loop
-                                                    muted
-                                                    playsInline
-                                                />
-                                            ) : null}
-                                            <button
-                                                onClick={() => {
-                                                    updateExercise(i, "mediaFile", null);
-                                                    updateExercise(i, "mediaUrl", "");
-                                                }}
-                                                className="w-full text-xs text-red-400 hover:text-red-300 py-1.5 transition-colors"
-                                            >
-                                                ✕ {t("removeExercise")}
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {/* URL fallback input */}
-                                    {!ex.mediaFile && (
-                                        <input
-                                            type="text"
-                                            value={ex.mediaUrl}
-                                            onChange={(e) => updateExercise(i, "mediaUrl", e.target.value)}
-                                            placeholder={t("orPasteUrl")}
-                                            className="w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 mb-2 text-sm text-zinc-100 
-                                 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
-                                        />
-                                    )}
 
                                     <div className="grid grid-cols-3 gap-2">
                                         <div>
@@ -410,7 +313,7 @@ export default function ManagePage() {
                         </button>
                         <button
                             onClick={handleSubmit}
-                            disabled={saving || !name.trim() || exercises.some((e) => !e.name.trim())}
+                            disabled={saving || !name.trim() || exercises.some((e) => !e.exerciseId)}
                             className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold 
                          transition-colors disabled:opacity-50"
                         >
@@ -449,7 +352,7 @@ export default function ManagePage() {
                                     {t("edit")}
                                 </button>
                                 <button
-                                    onClick={() => handleDelete(split.id)}
+                                    onClick={() => handleDeleteClick(split.id)}
                                     className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded transition-colors"
                                 >
                                     {t("delete")}
@@ -459,6 +362,21 @@ export default function ManagePage() {
                     </div>
                 ))}
             </div>
+
+            <ConfirmModal
+                isOpen={deleteModalOpen}
+                title={t("delete")}
+                message={t("deleteConfirm")}
+                confirmText={t("delete")}
+                cancelText={t("cancel")}
+                onConfirm={() => {
+                    if (splitToDelete) executeDelete(splitToDelete);
+                }}
+                onCancel={() => {
+                    setDeleteModalOpen(false);
+                    setSplitToDelete(null);
+                }}
+            />
         </div>
     );
 }
