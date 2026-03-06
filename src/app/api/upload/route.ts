@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
+import { put } from "@vercel/blob";
 import path from "path";
 import { randomUUID } from "crypto";
 
 const ALLOWED_EXTENSIONS = [".gif", ".mp4", ".webm", ".webp", ".png", ".jpg", ".jpeg"];
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
-// POST /api/upload — upload a media file
+// POST /api/upload — upload a media file to Vercel Blob Storage
 export async function POST(request: Request) {
     try {
         const formData = await request.formData();
@@ -28,16 +28,14 @@ export async function POST(request: Request) {
             );
         }
 
-        const uploadsDir = path.join(process.cwd(), "public", "uploads");
-        await mkdir(uploadsDir, { recursive: true });
-
         const filename = `${randomUUID()}${ext}`;
-        const filepath = path.join(uploadsDir, filename);
 
-        const buffer = Buffer.from(await file.arrayBuffer());
-        await writeFile(filepath, buffer);
+        // Upload to Vercel Blob Storage (works in both dev and production)
+        const blob = await put(`uploads/${filename}`, file, {
+            access: "public",
+        });
 
-        return NextResponse.json({ url: `/uploads/${filename}` });
+        return NextResponse.json({ url: blob.url });
     } catch (error) {
         console.error("Upload failed:", error);
         return NextResponse.json({ error: "Upload failed" }, { status: 500 });
