@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 interface SetRowProps {
     setNumber: number;
     targetReps: number;
@@ -21,11 +23,13 @@ export default function SetRow({
     onWeightChange,
     onComplete,
 }: SetRowProps) {
+    const t = useTranslations("setRow");
+
     return (
         <div
             className={`rounded-xl p-4 transition-colors duration-300 ${completed
-                    ? "bg-emerald-950/30 border border-emerald-800/40"
-                    : "bg-zinc-900 border border-zinc-800"
+                ? "bg-emerald-950/30 border border-emerald-800/40"
+                : "bg-zinc-900 border border-zinc-800"
                 }`}
         >
             {/* Header */}
@@ -33,14 +37,14 @@ export default function SetRow({
                 <div className="flex items-center gap-2">
                     <span
                         className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${completed
-                                ? "bg-emerald-600 text-white"
-                                : "bg-zinc-800 text-zinc-400"
+                            ? "bg-emerald-600 text-white"
+                            : "bg-zinc-800 text-zinc-400"
                             }`}
                     >
                         {setNumber}
                     </span>
                     <span className="text-sm text-zinc-400">
-                        Meta: <span className="text-zinc-200 font-medium">{targetReps} reps</span>
+                        {t("target", { reps: targetReps })}
                     </span>
                 </div>
                 {completed && (
@@ -52,7 +56,7 @@ export default function SetRow({
                                 clipRule="evenodd"
                             />
                         </svg>
-                        Concluída
+                        {t("completed")}
                     </span>
                 )}
             </div>
@@ -62,7 +66,7 @@ export default function SetRow({
                 {/* Reps */}
                 <div>
                     <label className="text-xs text-zinc-500 uppercase tracking-wider mb-1 block">
-                        Repetições
+                        {t("reps")}
                     </label>
                     <div className="flex items-center gap-1">
                         <button
@@ -92,7 +96,7 @@ export default function SetRow({
                 {/* Weight */}
                 <div>
                     <label className="text-xs text-zinc-500 uppercase tracking-wider mb-1 block">
-                        Carga (kg)
+                        {t("weight")}
                     </label>
                     <div className="flex items-center gap-1">
                         <button
@@ -127,7 +131,7 @@ export default function SetRow({
                     className="mt-3 w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg 
                      font-semibold transition-colors active:scale-[0.98]"
                 >
-                    ✓ Concluir Série
+                    {t("complete")}
                 </button>
             )}
         </div>

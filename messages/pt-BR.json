@@ -1,0 +1,93 @@
+{
+    "nav": {
+        "home": "Início",
+        "manage": "Gerenciar",
+        "history": "Histórico"
+    },
+    "home": {
+        "title": "Meu Treino 💪",
+        "subtitle": "Escolha sua rotina de hoje",
+        "syncButton": "Sincronizar Treinos",
+        "syncing": "Sincronizando...",
+        "syncSuccess": "{count} treino(s) sincronizado(s)!",
+        "syncNone": "Nenhum treino pendente para sincronizar.",
+        "syncError": "Falha na sincronização. Tente novamente.",
+        "noRoutines": "Nenhuma rotina encontrada",
+        "checkConnection": "Verifique sua conexão e tente novamente",
+        "loading": "Carregando rotinas...",
+        "exercises": "exercícios",
+        "startWorkout": "🚀 Iniciar Treino",
+        "rest": "descanso"
+    },
+    "workout": {
+        "back": "Voltar",
+        "restTitle": "⏱ Tempo de Descanso",
+        "previous": "← Anterior",
+        "next": "Próximo →",
+        "finishWorkout": "🏁 Finalizar Treino",
+        "finishEarly": "Finalizar antecipadamente",
+        "saving": "Salvando..."
+    },
+    "setRow": {
+        "target": "Meta: {reps} reps",
+        "reps": "Repetições",
+        "weight": "Carga (kg)",
+        "complete": "✓ Concluir Série",
+        "completed": "Concluída"
+    },
+    "timer": {
+        "restart": "Reiniciar",
+        "start": "Iniciar",
+        "resume": "Continuar",
+        "pause": "Pausar",
+        "reset": "Reset"
+    },
+    "sync": {
+        "online": "Online",
+        "offline": "Offline"
+    },
+    "manage": {
+        "title": "Gerenciar Treinos",
+        "subtitle": "Crie e edite suas rotinas",
+        "newSplit": "＋ Nova Rotina",
+        "editSplit": "Editar Rotina",
+        "createSplit": "Criar Rotina",
+        "splitName": "Nome da Rotina",
+        "splitNamePlaceholder": "Ex: Treino Push",
+        "description": "Descrição",
+        "descriptionPlaceholder": "Ex: Foco em peito, ombro e tríceps",
+        "exercises": "Exercícios",
+        "addExercise": "＋ Adicionar Exercício",
+        "exerciseName": "Nome do Exercício",
+        "exerciseNamePlaceholder": "Ex: Supino Reto",
+        "muscleGroup": "Grupo Muscular",
+        "muscleGroupPlaceholder": "Ex: Peitoral",
+        "mediaUrl": "URL do Vídeo/GIF",
+        "mediaUrlPlaceholder": "https://...",
+        "sets": "Séries",
+        "targetReps": "Reps",
+        "restTime": "Descanso (s)",
+        "save": "Salvar",
+        "cancel": "Cancelar",
+        "delete": "Excluir",
+        "deleteConfirm": "Tem certeza que deseja excluir esta rotina?",
+        "noExercises": "Adicione pelo menos um exercício",
+        "removeExercise": "Remover"
+    },
+    "history": {
+        "title": "Histórico de Treinos",
+        "subtitle": "Veja seus treinos concluídos",
+        "noHistory": "Nenhum treino registrado ainda",
+        "noHistoryDesc": "Complete um treino para vê-lo aqui",
+        "date": "Data",
+        "split": "Rotina",
+        "status": "Status",
+        "synced": "Sincronizado",
+        "pending": "Pendente",
+        "sets": "séries",
+        "reps": "reps",
+        "kg": "kg",
+        "details": "Detalhes",
+        "loading": "Carregando histórico..."
+    }
+}

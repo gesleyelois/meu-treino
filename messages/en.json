@@ -1,0 +1,93 @@
+{
+    "nav": {
+        "home": "Home",
+        "manage": "Manage",
+        "history": "History"
+    },
+    "home": {
+        "title": "My Workout 💪",
+        "subtitle": "Choose today's routine",
+        "syncButton": "Sync Workouts",
+        "syncing": "Syncing...",
+        "syncSuccess": "{count} workout(s) synced!",
+        "syncNone": "No pending workouts to sync.",
+        "syncError": "Sync failed. Try again.",
+        "noRoutines": "No routines found",
+        "checkConnection": "Check your connection and try again",
+        "loading": "Loading routines...",
+        "exercises": "exercises",
+        "startWorkout": "🚀 Start Workout",
+        "rest": "rest"
+    },
+    "workout": {
+        "back": "Back",
+        "restTitle": "⏱ Rest Time",
+        "previous": "← Previous",
+        "next": "Next →",
+        "finishWorkout": "🏁 Finish Workout",
+        "finishEarly": "Finish early",
+        "saving": "Saving..."
+    },
+    "setRow": {
+        "target": "Target: {reps} reps",
+        "reps": "Reps",
+        "weight": "Weight (kg)",
+        "complete": "✓ Complete Set",
+        "completed": "Completed"
+    },
+    "timer": {
+        "restart": "Restart",
+        "start": "Start",
+        "resume": "Resume",
+        "pause": "Pause",
+        "reset": "Reset"
+    },
+    "sync": {
+        "online": "Online",
+        "offline": "Offline"
+    },
+    "manage": {
+        "title": "Manage Workouts",
+        "subtitle": "Create and edit your routines",
+        "newSplit": "＋ New Routine",
+        "editSplit": "Edit Routine",
+        "createSplit": "Create Routine",
+        "splitName": "Routine Name",
+        "splitNamePlaceholder": "E.g. Push Day",
+        "description": "Description",
+        "descriptionPlaceholder": "E.g. Chest, shoulders and triceps",
+        "exercises": "Exercises",
+        "addExercise": "＋ Add Exercise",
+        "exerciseName": "Exercise Name",
+        "exerciseNamePlaceholder": "E.g. Bench Press",
+        "muscleGroup": "Muscle Group",
+        "muscleGroupPlaceholder": "E.g. Chest",
+        "mediaUrl": "Video/GIF URL",
+        "mediaUrlPlaceholder": "https://...",
+        "sets": "Sets",
+        "targetReps": "Reps",
+        "restTime": "Rest (s)",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "deleteConfirm": "Are you sure you want to delete this routine?",
+        "noExercises": "Add at least one exercise",
+        "removeExercise": "Remove"
+    },
+    "history": {
+        "title": "Workout History",
+        "subtitle": "View your completed workouts",
+        "noHistory": "No workouts recorded yet",
+        "noHistoryDesc": "Complete a workout to see it here",
+        "date": "Date",
+        "split": "Routine",
+        "status": "Status",
+        "synced": "Synced",
+        "pending": "Pending",
+        "sets": "sets",
+        "reps": "reps",
+        "kg": "kg",
+        "details": "Details",
+        "loading": "Loading history..."
+    }
+}

@@ -31,14 +31,5 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <html lang="pt-BR" className="dark">
-      <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-      </head>
-      <body className={`${inter.variable} font-sans antialiased`}>
-        <main className="min-h-dvh">{children}</main>
-      </body>
-    </html>
-  );
+  return children;
 }

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { getPendingSyncCount } from "@/lib/sync";
 
 export default function SyncBadge() {
+    const t = useTranslations("sync");
     const [count, setCount] = useState(0);
     const [isOnline, setIsOnline] = useState(true);
 
@@ -34,18 +36,16 @@ export default function SyncBadge() {
 
     return (
         <div className="flex items-center gap-3">
-            {/* Online / Offline indicator */}
             <div className="flex items-center gap-1.5">
                 <div
                     className={`w-2 h-2 rounded-full ${isOnline ? "bg-emerald-500" : "bg-red-500 animate-pulse-dot"
                         }`}
                 />
                 <span className="text-xs text-zinc-400">
-                    {isOnline ? "Online" : "Offline"}
+                    {isOnline ? t("online") : t("offline")}
                 </span>
             </div>
 
-            {/* Pending sync count */}
             {count > 0 && (
                 <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full px-2.5 py-1">
                     <svg
