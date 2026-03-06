@@ -33,6 +33,7 @@ export default function ActiveWorkout() {
     const [showTimer, setShowTimer] = useState(false);
     const [saving, setSaving] = useState(false);
     const [workoutStartTime] = useState(new Date().toISOString());
+    const [touchStart, setTouchStart] = useState<number | null>(null);
 
     const loadSplit = useCallback(async () => {
         const data = await getSplit(splitId);
@@ -117,6 +118,26 @@ export default function ActiveWorkout() {
         }
     };
 
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setTouchStart(e.touches[0].clientX);
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStart === null) return;
+        const touchEnd = e.changedTouches[0].clientX;
+        const diff = touchStart - touchEnd;
+
+        const swipeThreshold = 50;
+        if (Math.abs(diff) > swipeThreshold) {
+            if (diff > 0) {
+                nextExercise();
+            } else {
+                prevExercise();
+            }
+        }
+        setTouchStart(null);
+    };
+
     const finishWorkout = async () => {
         setSaving(true);
         const exerciseLogs: SyncExerciseLog[] = [];
@@ -156,7 +177,11 @@ export default function ActiveWorkout() {
         exerciseStates.reduce((acc, es) => acc + es.sets.length, 0);
 
     return (
-        <div className="page-enter min-h-dvh pb-8">
+        <div
+            className="page-enter min-h-dvh pb-8"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+        >
             <header className="sticky top-0 z-10 bg-zinc-950/90 backdrop-blur-xl px-4 py-4 border-b border-zinc-800/50">
                 <div className="max-w-lg mx-auto">
                     <div className="flex items-center justify-between mb-2">
@@ -183,17 +208,49 @@ export default function ActiveWorkout() {
             <div className="px-4 max-w-lg mx-auto mt-4">
                 {currentWE.exercise.mediaUrl && (
                     <div className="mb-4 rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-800">
-                        <video key={currentWE.exercise.mediaUrl} className="w-full aspect-video object-cover" autoPlay loop muted playsInline>
-                            <source src={currentWE.exercise.mediaUrl} type="video/mp4" />
-                        </video>
+                        {/\.(gif|png|jpg|jpeg|webp|svg)(\?.*)?$/i.test(currentWE.exercise.mediaUrl) ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                                key={currentWE.exercise.mediaUrl}
+                                src={currentWE.exercise.mediaUrl}
+                                alt={currentWE.exercise.name}
+                                className="w-full aspect-video object-contain bg-zinc-950"
+                            />
+                        ) : (
+                            <video key={currentWE.exercise.mediaUrl} className="w-full aspect-video object-cover" autoPlay loop muted playsInline>
+                                <source src={currentWE.exercise.mediaUrl} type="video/mp4" />
+                            </video>
+                        )}
                     </div>
                 )}
 
-                <div className="mb-4">
-                    <h2 className="text-xl font-bold">{currentWE.exercise.name}</h2>
-                    <p className="text-sm text-zinc-400 mt-0.5">
-                        {currentWE.exercise.muscleGroup} · {currentWE.sets}×{currentWE.targetReps} · {currentWE.restTimeSeconds}s
-                    </p>
+                <div className="flex items-center justify-between mb-4">
+                    <button
+                        onClick={prevExercise}
+                        disabled={currentExerciseIndex === 0}
+                        className="w-12 h-12 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:hover:bg-zinc-800 text-zinc-200 rounded-full flex items-center justify-center shrink-0 transition-colors active:scale-[0.97]"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+
+                    <div className="flex-1 text-center px-2">
+                        <h2 className="text-xl font-bold">{currentWE.exercise.name}</h2>
+                        <p className="text-sm text-zinc-400 mt-0.5">
+                            {currentWE.exercise.muscleGroup} · {currentWE.sets}×{currentWE.targetReps} · {currentWE.restTimeSeconds}s
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={nextExercise}
+                        disabled={isLastExercise}
+                        className="w-12 h-12 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 disabled:hover:bg-zinc-800 text-zinc-200 rounded-full flex items-center justify-center shrink-0 transition-colors active:scale-[0.97]"
+                    >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
                 </div>
 
                 <div className="flex flex-col gap-3 mb-6">
@@ -219,20 +276,8 @@ export default function ActiveWorkout() {
                     </div>
                 )}
 
-                <div className="flex gap-3 mt-4">
-                    {currentExerciseIndex > 0 && (
-                        <button onClick={prevExercise} className="flex-1 h-14 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl font-semibold transition-colors active:scale-[0.97]">
-                            {t("previous")}
-                        </button>
-                    )}
-                    {!isLastExercise && (
-                        <button onClick={nextExercise} className="flex-1 h-14 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-xl font-semibold transition-colors active:scale-[0.97]">
-                            {t("next")}
-                        </button>
-                    )}
-                </div>
 
-                {isLastExercise && allSetsCompleted && (
+                {allExercisesCompleted ? (
                     <button
                         onClick={finishWorkout}
                         disabled={saving}
@@ -240,15 +285,13 @@ export default function ActiveWorkout() {
                     >
                         {saving ? t("saving") : t("finishWorkout")}
                     </button>
-                )}
-
-                {!allExercisesCompleted && (
+                ) : (
                     <button
                         onClick={finishWorkout}
                         disabled={saving}
                         className="w-full mt-3 h-12 bg-transparent hover:bg-zinc-900 text-zinc-500 hover:text-zinc-300 rounded-xl font-medium text-sm transition-colors border border-zinc-800/50"
                     >
-                        {t("finishEarly")}
+                        {saving ? t("saving") : t("finishEarly")}
                     </button>
                 )}
             </div>
