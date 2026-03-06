@@ -9,6 +9,7 @@ interface ExerciseForm {
     name: string;
     muscleGroup: string;
     mediaUrl: string;
+    mediaFile: File | null;
     sets: number;
     targetReps: number;
     restTimeSeconds: number;
@@ -18,6 +19,7 @@ const emptyExercise: ExerciseForm = {
     name: "",
     muscleGroup: "",
     mediaUrl: "",
+    mediaFile: null,
     sets: 3,
     targetReps: 12,
     restTimeSeconds: 90,
@@ -29,6 +31,7 @@ export default function ManagePage() {
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [editingSplitId, setEditingSplitId] = useState<string | null>(null);
 
     // Form state
     const [name, setName] = useState("");
@@ -52,6 +55,33 @@ export default function ManagePage() {
         loadSplits();
     }, [loadSplits]);
 
+    const resetForm = () => {
+        setShowForm(false);
+        setEditingSplitId(null);
+        setName("");
+        setDescription("");
+        setExercises([{ ...emptyExercise }]);
+    };
+
+    const handleEdit = (split: CatalogSplit) => {
+        setEditingSplitId(split.id);
+        setName(split.name);
+        setDescription(split.description || "");
+        setExercises(
+            split.exercises.map((we) => ({
+                name: we.exercise.name,
+                muscleGroup: we.exercise.muscleGroup,
+                mediaUrl: we.exercise.mediaUrl || "",
+                mediaFile: null,
+                sets: we.sets,
+                targetReps: we.targetReps,
+                restTimeSeconds: we.restTimeSeconds,
+            }))
+        );
+        setShowForm(true);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
     const addExercise = () => {
         setExercises((prev) => [...prev, { ...emptyExercise }]);
     };
@@ -60,10 +90,22 @@ export default function ManagePage() {
         setExercises((prev) => prev.filter((_, i) => i !== index));
     };
 
-    const updateExercise = (index: number, field: keyof ExerciseForm, value: string | number) => {
+    const updateExercise = (index: number, field: keyof ExerciseForm, value: string | number | File | null) => {
         setExercises((prev) =>
             prev.map((ex, i) => (i === index ? { ...ex, [field]: value } : ex))
         );
+    };
+
+    const uploadFile = async (file: File): Promise<string> => {
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+        });
+        if (!res.ok) throw new Error("Upload failed");
+        const data = await res.json();
+        return data.url;
     };
 
     const handleSubmit = async () => {
@@ -71,22 +113,40 @@ export default function ManagePage() {
 
         setSaving(true);
         try {
-            const res = await fetch("/api/splits", {
-                method: "POST",
+            // Upload any files first
+            const processedExercises = await Promise.all(
+                exercises.map(async (ex) => {
+                    let mediaUrl = ex.mediaUrl;
+                    if (ex.mediaFile) {
+                        mediaUrl = await uploadFile(ex.mediaFile);
+                    }
+                    return {
+                        name: ex.name,
+                        muscleGroup: ex.muscleGroup,
+                        mediaUrl,
+                        sets: ex.sets,
+                        targetReps: ex.targetReps,
+                        restTimeSeconds: ex.restTimeSeconds,
+                    };
+                })
+            );
+
+            const url = editingSplitId ? `/api/splits/${editingSplitId}` : "/api/splits";
+            const method = editingSplitId ? "PUT" : "POST";
+
+            const res = await fetch(url, {
+                method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, description, exercises }),
+                body: JSON.stringify({ name, description, exercises: processedExercises }),
             });
 
             if (res.ok) {
-                setShowForm(false);
-                setName("");
-                setDescription("");
-                setExercises([{ ...emptyExercise }]);
+                resetForm();
                 await refreshCatalog();
                 await loadSplits();
             }
         } catch (error) {
-            console.error("Failed to create split:", error);
+            console.error("Failed to save split:", error);
         }
         setSaving(false);
     };
@@ -103,6 +163,10 @@ export default function ManagePage() {
         } catch (error) {
             console.error("Failed to delete split:", error);
         }
+    };
+
+    const isMediaImage = (url: string) => {
+        return /\.(gif|png|jpg|jpeg|webp|svg)(\?.*)?$/i.test(url);
     };
 
     return (
@@ -124,10 +188,12 @@ export default function ManagePage() {
                 </button>
             )}
 
-            {/* Create form */}
+            {/* Create/Edit form */}
             {showForm && (
                 <div className="mb-6 bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-                    <h2 className="text-lg font-bold mb-4">{t("createSplit")}</h2>
+                    <h2 className="text-lg font-bold mb-4">
+                        {editingSplitId ? t("editSplit") : t("createSplit")}
+                    </h2>
 
                     {/* Split name */}
                     <div className="mb-4">
@@ -198,15 +264,96 @@ export default function ManagePage() {
                                             className="h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-zinc-100 
                                  placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
                                         />
+                                        <div className="flex flex-col gap-1">
+                                            {/* File upload */}
+                                            <label
+                                                className="h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-zinc-100
+                                     flex items-center justify-center cursor-pointer hover:bg-zinc-700 transition-colors"
+                                            >
+                                                <span className="truncate text-xs">
+                                                    {ex.mediaFile
+                                                        ? ex.mediaFile.name
+                                                        : ex.mediaUrl
+                                                            ? "✓ " + t("preview")
+                                                            : t("uploadFile")}
+                                                </span>
+                                                <input
+                                                    type="file"
+                                                    accept=".gif,.mp4,.webm,.webp,.png,.jpg,.jpeg"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0] || null;
+                                                        if (file) {
+                                                            updateExercise(i, "mediaFile", file);
+                                                            updateExercise(i, "mediaUrl", "");
+                                                        }
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* Media preview */}
+                                    {(ex.mediaFile || ex.mediaUrl) && (
+                                        <div className="mb-2 rounded-lg overflow-hidden bg-zinc-900 border border-zinc-700/50">
+                                            {ex.mediaFile ? (
+                                                isMediaImage(ex.mediaFile.name) ? (
+                                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                                    <img
+                                                        src={URL.createObjectURL(ex.mediaFile)}
+                                                        alt={t("preview")}
+                                                        className="w-full max-h-40 object-contain"
+                                                    />
+                                                ) : (
+                                                    <video
+                                                        src={URL.createObjectURL(ex.mediaFile)}
+                                                        className="w-full max-h-40 object-contain"
+                                                        autoPlay
+                                                        loop
+                                                        muted
+                                                        playsInline
+                                                    />
+                                                )
+                                            ) : ex.mediaUrl && isMediaImage(ex.mediaUrl) ? (
+                                                /* eslint-disable-next-line @next/next/no-img-element */
+                                                <img
+                                                    src={ex.mediaUrl}
+                                                    alt={t("preview")}
+                                                    className="w-full max-h-40 object-contain"
+                                                />
+                                            ) : ex.mediaUrl ? (
+                                                <video
+                                                    src={ex.mediaUrl}
+                                                    className="w-full max-h-40 object-contain"
+                                                    autoPlay
+                                                    loop
+                                                    muted
+                                                    playsInline
+                                                />
+                                            ) : null}
+                                            <button
+                                                onClick={() => {
+                                                    updateExercise(i, "mediaFile", null);
+                                                    updateExercise(i, "mediaUrl", "");
+                                                }}
+                                                className="w-full text-xs text-red-400 hover:text-red-300 py-1.5 transition-colors"
+                                            >
+                                                ✕ {t("removeExercise")}
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* URL fallback input */}
+                                    {!ex.mediaFile && (
                                         <input
                                             type="text"
                                             value={ex.mediaUrl}
                                             onChange={(e) => updateExercise(i, "mediaUrl", e.target.value)}
-                                            placeholder={t("mediaUrlPlaceholder")}
-                                            className="h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 text-sm text-zinc-100 
+                                            placeholder={t("orPasteUrl")}
+                                            className="w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 mb-2 text-sm text-zinc-100 
                                  placeholder:text-zinc-600 focus:outline-none focus:border-emerald-600"
                                         />
-                                    </div>
+                                    )}
 
                                     <div className="grid grid-cols-3 gap-2">
                                         <div>
@@ -256,12 +403,7 @@ export default function ManagePage() {
                     {/* Actions */}
                     <div className="flex gap-3">
                         <button
-                            onClick={() => {
-                                setShowForm(false);
-                                setName("");
-                                setDescription("");
-                                setExercises([{ ...emptyExercise }]);
-                            }}
+                            onClick={resetForm}
                             className="flex-1 h-12 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg font-medium transition-colors"
                         >
                             {t("cancel")}
@@ -272,7 +414,7 @@ export default function ManagePage() {
                             className="flex-1 h-12 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold 
                          transition-colors disabled:opacity-50"
                         >
-                            {saving ? "..." : t("save")}
+                            {saving ? t("uploading") : t("save")}
                         </button>
                     </div>
                 </div>
@@ -290,7 +432,7 @@ export default function ManagePage() {
                 {splits.map((split) => (
                     <div key={split.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
                         <div className="flex items-start justify-between">
-                            <div>
+                            <div className="flex-1 min-w-0">
                                 <h3 className="font-bold text-zinc-100">{split.name}</h3>
                                 {split.description && (
                                     <p className="text-xs text-zinc-500 mt-0.5">{split.description}</p>
@@ -299,12 +441,20 @@ export default function ManagePage() {
                                     {split.exercises.length} {t("exercises").toLowerCase()} — {split.exercises.map((e) => e.exercise.name).join(", ")}
                                 </p>
                             </div>
-                            <button
-                                onClick={() => handleDelete(split.id)}
-                                className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded transition-colors"
-                            >
-                                {t("delete")}
-                            </button>
+                            <div className="flex items-center gap-1 ml-2 shrink-0">
+                                <button
+                                    onClick={() => handleEdit(split)}
+                                    className="text-xs text-emerald-400 hover:text-emerald-300 px-2 py-1 rounded transition-colors"
+                                >
+                                    {t("edit")}
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(split.id)}
+                                    className="text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded transition-colors"
+                                >
+                                    {t("delete")}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}
