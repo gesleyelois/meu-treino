@@ -16,20 +16,12 @@ export async function DELETE(
     const { id } = await params;
 
     try {
-        const existing = await prisma.workoutExercise.findFirst({
-            where: { exerciseId: id }
-        });
-
-        if (existing) {
-            return NextResponse.json(
-                { error: "Cannot delete exercise because it is currently used in User Workouts. Remove references first." },
-                { status: 400 }
-            );
-        }
-
-        await prisma.exercise.delete({
-            where: { id }
-        });
+        // Cascade-delete related records before deleting the exercise
+        await prisma.$transaction([
+            prisma.exerciseLog.deleteMany({ where: { exerciseId: id } }),
+            prisma.workoutExercise.deleteMany({ where: { exerciseId: id } }),
+            prisma.exercise.delete({ where: { id } }),
+        ]);
 
         return NextResponse.json({ deleted: true });
     } catch (error) {
