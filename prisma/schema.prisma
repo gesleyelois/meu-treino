@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model WorkoutSplit {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  exercises   WorkoutExercise[]
+  logs        WorkoutLog[]
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  @@map("workout_splits")
+}
+
+model Exercise {
+  id          String            @id @default(cuid())
+  name        String
+  muscleGroup String            @map("muscle_group")
+  mediaUrl    String?           @map("media_url")
+  workouts    WorkoutExercise[]
+  logs        ExerciseLog[]
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  @@map("exercises")
+}
+
+model WorkoutExercise {
+  id              String       @id @default(cuid())
+  workoutSplit    WorkoutSplit @relation(fields: [workoutSplitId], references: [id])
+  workoutSplitId  String       @map("workout_split_id")
+  exercise        Exercise     @relation(fields: [exerciseId], references: [id])
+  exerciseId      String       @map("exercise_id")
+  sets            Int          @default(3)
+  targetReps      Int          @default(12) @map("target_reps")
+  restTimeSeconds Int          @default(60) @map("rest_time_seconds")
+  order           Int          @default(0)
+
+  @@map("workout_exercises")
+}
+
+model WorkoutLog {
+  id             String        @id @default(cuid())
+  date           DateTime      @default(now())
+  workoutSplit   WorkoutSplit  @relation(fields: [workoutSplitId], references: [id])
+  workoutSplitId String        @map("workout_split_id")
+  status         String        @default("pending_sync")
+  exerciseLogs   ExerciseLog[]
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  @@map("workout_logs")
+}
+
+model ExerciseLog {
+  id            String     @id @default(cuid())
+  workoutLog    WorkoutLog @relation(fields: [workoutLogId], references: [id])
+  workoutLogId  String     @map("workout_log_id")
+  exercise      Exercise   @relation(fields: [exerciseId], references: [id])
+  exerciseId    String     @map("exercise_id")
+  setNumber     Int        @map("set_number")
+  repsCompleted Int        @map("reps_completed")
+  weightUsed    Float      @map("weight_used")
+
+  @@map("exercise_logs")
+}
