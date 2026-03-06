@@ -1,0 +1,175 @@
+# Meu Treino — Instruções para Agentes de IA
+
+## Objetivo do Projeto
+
+**Meu Treino** é um PWA (Progressive Web App) de rastreamento de treinos de academia, construído com arquitetura **offline-first**. Usuários podem visualizar suas rotinas, executar treinos registrando séries/repetições/carga em tempo real, e ter os dados sincronizados automaticamente quando a conexão estiver disponível.
+
+---
+
+## Stack Tecnológica
+
+| Camada          | Tecnologia                                  | Versão    |
+|-----------------|---------------------------------------------|-----------|
+| Framework       | Next.js (App Router)                        | 16.x      |
+| Linguagem       | TypeScript (strict)                         | 5.x       |
+| Banco de Dados  | PostgreSQL via Neon                         | —         |
+| ORM             | Prisma                                      | 6.x       |
+| Autenticação    | @neondatabase/auth (Neon Auth)              | 0.2.x     |
+| Estilização     | Tailwind CSS v4 (via `@tailwindcss/postcss`) | 4.x       |
+| Internacionalização | next-intl                               | 4.x       |
+| Armazenamento Local | Dexie.js (IndexedDB)                    | 4.x       |
+| PWA             | next-pwa                                    | 5.x       |
+| Runtime         | React                                       | 19.x      |
+
+---
+
+## Regras de Codificação
+
+### TypeScript
+
+- **Obrigatório:** Todo código DEVE ser escrito em TypeScript. Nunca crie arquivos `.js` ou `.jsx`.
+- Tipar explicitamente os parâmetros e retornos de funções exportadas.
+- Usar `interface` para objetos, não `type`, a menos que seja uma union ou intersection.
+- Evitar `any`. Quando absolutamente necessário, usar `// eslint-disable-next-line @typescript-eslint/no-explicit-any`.
+
+### Componentes React
+
+- Usar **componentes funcionais** exclusivamente. Nunca usar `class`.
+- Client Components devem iniciar com a diretiva `"use client";`.
+- Server Components são o padrão no App Router — não adicione `"use client"` desnecessariamente.
+- Props devem ser tipadas com `interface`, nomeadas como `NomeDoComponenteProps`.
+
+### Server Actions vs. Route Handlers
+
+- **API Routes (`/api/...`)** são usadas para endpoints REST consumidos pelo client-side (ex: `GET /api/workouts`, `POST /api/sync`).
+- Autenticação é verificada em cada Route Handler via `requireAuth()` de `@/lib/auth-check`.
+- Server Actions (funções `"use server"`) podem ser usadas para mutações simples invocadas diretamente de Server Components.
+
+### Internacionalização (i18n)
+
+- **Obrigatório:** Todo texto visível ao usuário DEVE usar o padrão do `next-intl`.
+- Nunca escrever strings hardcoded em tela. Sempre usar `useTranslations("namespace")` em Client Components ou `getTranslations("namespace")` em Server Components.
+- Locales suportados: `pt-BR` (padrão) e `en`.
+- Arquivos de tradução ficam em `messages/pt-BR.json` e `messages/en.json`.
+- Ao criar novos textos, adicionar a chave em **AMBOS** os arquivos de tradução.
+- O roteamento de i18n é baseado no segmento `[locale]` do URL (ex: `/pt-BR/workout/123`).
+
+### Estrutura de Imports
+
+- Usar `@/` como alias para `src/`.
+- Exemplos:
+  - `import { prisma } from "@/lib/prisma";`
+  - `import SyncBadge from "@/components/SyncBadge";`
+  - `import { routing } from "@/i18n/routing";`
+
+---
+
+## Regras de Estilização
+
+### Tailwind CSS v4
+
+- **Prioridade total ao Tailwind.** Evitar CSS customizado a menos que o Tailwind não suporte (ex: animações complexas).
+- Tokens de design customizados estão definidos em `src/app/globals.css` dentro do bloco `@theme inline { ... }`.
+- Cores semânticas disponíveis:
+  - `background` (#09090b — zinc-950)
+  - `surface` (#18181b — zinc-900)
+  - `border` (#27272a — zinc-800)
+  - `primary` (#059669 — emerald-600)
+  - `primary-hover` (#047857 — emerald-700)
+  - `primary-glow` (rgba emerald com 15% opacidade)
+  - `text-primary` (#fafafa — zinc-50)
+  - `text-secondary` (#a1a1aa — zinc-400)
+  - `warning` (#f59e0b — amber-500)
+  - `danger` (#ef4444 — red-500)
+
+### Tabular Nums
+
+- **Obrigatório:** Todo número exibido em tela (timers, cargas, repetições, contadores) DEVE usar a classe `tabular-nums` para alinhamento monoespaçado.
+
+### Fat Finger Rule
+
+- **Obrigatório:** Todo elemento clicável/tocável (botões, links, inputs de toque) DEVE ter altura mínima de `h-14` (56px). Isso garante usabilidade em telas touch, especialmente no contexto de academia (mãos suadas, luvas, etc.).
+- Botões menores (como controles de timer) podem usar `h-10` desde que sejam secundários e não a ação principal.
+
+### Dark Mode-First
+
+- O tema é exclusivamente escuro. Não existe light mode.
+- `html` usa `color-scheme: dark;` e classe `className="dark"`.
+- Fundo geral: `bg-zinc-950` / `var(--color-background)`.
+- Superfícies elevadas: `bg-zinc-900`.
+
+### Transições e Animações
+
+- Botões devem ter `transition-colors` e `active:scale-[0.97]` ou `active:scale-95` para feedback tátil.
+- Usar `backdrop-blur-xl` em headers fixos e barras de navegação.
+- Animação de entrada de página: classe `page-enter` (fadeSlideIn 0.3s).
+
+---
+
+## Padrões de Componentes
+
+### Media Player (Vídeos/GIFs de Exercícios)
+
+- Sempre usar: `w-full aspect-video object-cover rounded-xl`.
+- Vídeos: `autoPlay loop muted playsInline`.
+- Imagens/GIFs: `<img>` com as mesmas classes de dimensão.
+- Aceitar tanto URLs externas quanto uploads locais (`/uploads/...`).
+
+### Formulários
+
+- Inputs de texto: `bg-zinc-800 border-zinc-700 rounded-xl h-14 px-4 text-lg`.
+- Labels: `text-sm text-zinc-400`.
+- Botões de submit: fundo `emerald-600`, texto branco, `h-14 w-full rounded-xl font-bold`.
+
+### Modais de Confirmação
+
+- Usar o componente `ConfirmModal` para ações destrutivas.
+- Nunca usar `window.confirm()` ou `window.alert()`.
+- O modal deve ter `isDangerous` para ações destrutivas (background vermelho) e sem flag para ações positivas (background verde).
+
+---
+
+## Convenções de Arquivo
+
+```
+src/
+├── app/
+│   ├── [locale]/           # Roteamento i18n
+│   │   ├── (protected)/    # Rotas autenticadas
+│   │   │   ├── page.tsx    # Home (lista de splits)
+│   │   │   ├── workout/    # Execução de treino
+│   │   │   ├── manage/     # CRUD de rotinas
+│   │   │   ├── history/    # Histórico
+│   │   │   └── admin/      # Painel admin
+│   │   ├── auth/           # Telas de login
+│   │   └── layout.tsx      # LocaleLayout com NextIntlClientProvider
+│   ├── api/                # Route Handlers REST
+│   ├── globals.css         # Tokens de design + animações
+│   └── layout.tsx          # RootLayout (metadata, viewport, font)
+├── components/             # Componentes reutilizáveis
+├── i18n/                   # Configuração next-intl
+├── lib/                    # Utilitários (prisma, db, sync, auth)
+└── middleware.ts           # Middleware de i18n
+messages/
+├── pt-BR.json              # Traduções pt-BR
+└── en.json                 # Traduções EN
+prisma/
+├── schema.prisma           # Schema do banco
+└── seed.ts                 # Seed com exercícios e splits iniciais
+```
+
+---
+
+## Proteção contra Double-Click
+
+- Botões de submit e ações que disparam requisições devem ter proteção contra clique duplo.
+- Padrão: usar estado `isSubmitting` / `disabled={isSubmitting}` durante a operação.
+
+---
+
+## Offline-First
+
+- O catálogo de treinos é cacheado localmente via **Dexie.js** (IndexedDB).
+- Logs de treino são salvos primeiro na `syncQueue` do IndexedDB e depois sincronizados com o servidor via `POST /api/sync`.
+- O app monitora `navigator.onLine` e tenta sincronizar automaticamente ao reconectar.
+- O Service Worker é gerenciado pelo `next-pwa` e desabilitado em desenvolvimento.
