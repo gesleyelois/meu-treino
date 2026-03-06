@@ -17,6 +17,7 @@
         "loading": "Carregando rotinas...",
         "exercises": "exercícios",
         "startWorkout": "🚀 Iniciar Treino",
+        "workoutCompleted": "✅ Treino Concluído",
         "rest": "descanso"
     },
     "workout": {
@@ -70,9 +71,14 @@
         "save": "Salvar",
         "cancel": "Cancelar",
         "delete": "Excluir",
+        "edit": "Editar",
         "deleteConfirm": "Tem certeza que deseja excluir esta rotina?",
         "noExercises": "Adicione pelo menos um exercício",
-        "removeExercise": "Remover"
+        "removeExercise": "Remover",
+        "uploadFile": "📎 Enviar Arquivo",
+        "orPasteUrl": "ou cole um link (URL)",
+        "uploading": "Enviando...",
+        "preview": "Pré-visualização"
     },
     "history": {
         "title": "Histórico de Treinos",
@@ -88,6 +94,14 @@
         "reps": "reps",
         "kg": "kg",
         "details": "Detalhes",
-        "loading": "Carregando histórico..."
+        "loading": "Carregando histórico...",
+        "monthly": "Mensal",
+        "weekly": "Semanal",
+        "daily": "Diário",
+        "today": "Hoje",
+        "showAll": "Mostrar todos",
+        "noWorkoutsOnDate": "Nenhum treino nesta data",
+        "workoutSingular": "treino",
+        "workoutPlural": "treinos"
     }
 }

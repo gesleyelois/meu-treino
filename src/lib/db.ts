@@ -23,6 +23,7 @@ export interface CatalogSplit {
     name: string;
     description: string | null;
     exercises: CatalogWorkoutExercise[];
+    logs?: { date: string; id: string }[];
 }
 
 // ── Sync queue types ───────────────────────────────────────────────

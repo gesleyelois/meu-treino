@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
     try {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
         const splits = await prisma.workoutSplit.findMany({
             include: {
                 exercises: {
@@ -13,6 +16,17 @@ export async function GET() {
                         order: "asc",
                     },
                 },
+                logs: {
+                    where: {
+                        date: {
+                            gte: oneWeekAgo
+                        }
+                    },
+                    select: {
+                        date: true,
+                        id: true
+                    }
+                }
             },
         });
 

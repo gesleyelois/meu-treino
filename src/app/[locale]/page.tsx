@@ -113,59 +113,74 @@ export default function Home() {
 
       {/* Workout Cards */}
       <div className="flex flex-col gap-4">
-        {splits.map((split, index) => (
-          <div
-            key={split.id}
-            className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 
-                       hover:border-zinc-700 transition-all duration-200
-                       hover:shadow-lg hover:shadow-emerald-950/20"
-            style={{ animationDelay: `${index * 80}ms` }}
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div>
-                <h2 className="text-lg font-bold text-zinc-50">{split.name}</h2>
-                {split.description && (
-                  <p className="text-sm text-zinc-400 mt-0.5">{split.description}</p>
-                )}
-              </div>
-              <span className="text-xs bg-zinc-800 text-zinc-400 px-2.5 py-1 rounded-full font-medium">
-                {split.exercises.length} {t("exercises")}
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-2 mb-4">
-              {split.exercises.map((we) => (
-                <div
-                  key={we.id}
-                  className="flex items-center gap-3 bg-zinc-800/50 rounded-lg px-3 py-2.5"
-                >
-                  <span className="text-lg">
-                    {MUSCLE_ICONS[we.exercise.muscleGroup] || MUSCLE_ICONS.default}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-zinc-200 truncate">
-                      {we.exercise.name}
-                    </p>
-                    <p className="text-xs text-zinc-500">
-                      {we.sets}×{we.targetReps} · {we.exercise.muscleGroup} ·{" "}
-                      {we.restTimeSeconds}s {t("rest")}
-                    </p>
-                  </div>
+        {splits.map((split, index) => {
+          const isCompleted = split.logs && split.logs.length > 0;
+          return (
+            <div
+              key={split.id}
+              className={`border rounded-2xl p-5 
+                         transition-all duration-200
+                         ${isCompleted
+                  ? "bg-zinc-900/40 border-zinc-800/40 opacity-70"
+                  : "bg-zinc-900 border-zinc-800 hover:border-zinc-700 hover:shadow-lg hover:shadow-emerald-950/20"
+                }`}
+              style={{ animationDelay: `${index * 80}ms` }}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h2 className={`text-lg font-bold flex items-center gap-2 ${isCompleted ? 'text-zinc-300' : 'text-zinc-50'}`}>
+                    {split.name}
+                    {isCompleted && (
+                      <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </h2>
+                  {split.description && (
+                    <p className="text-sm text-zinc-500 mt-0.5">{split.description}</p>
+                  )}
                 </div>
-              ))}
-            </div>
+                <span className={`text-xs px-2.5 py-1 rounded-full font-medium shrink-0 ${isCompleted ? 'bg-zinc-800/50 text-zinc-500' : 'bg-zinc-800 text-zinc-400'}`}>
+                  {split.exercises.length} {t("exercises")}
+                </span>
+              </div>
 
-            <Link href={`/${locale}/workout/${split.id}`}>
-              <button
-                className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl 
-                           font-bold text-base transition-all active:scale-[0.97]
-                           shadow-lg shadow-emerald-600/20"
-              >
-                {t("startWorkout")}
-              </button>
-            </Link>
-          </div>
-        ))}
+              <div className={`flex flex-col gap-2 mb-4 ${isCompleted ? 'grayscale opacity-70' : ''}`}>
+                {split.exercises.map((we) => (
+                  <div
+                    key={we.id}
+                    className="flex items-center gap-3 bg-zinc-800/50 rounded-lg px-3 py-2.5"
+                  >
+                    <span className="text-lg">
+                      {MUSCLE_ICONS[we.exercise.muscleGroup] || MUSCLE_ICONS.default}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-zinc-200 truncate">
+                        {we.exercise.name}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {we.sets}×{we.targetReps} · {we.exercise.muscleGroup} ·{" "}
+                        {we.restTimeSeconds}s {t("rest")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Link href={`/${locale}/workout/${split.id}`}>
+                <button
+                  className={`w-full h-14 rounded-xl 
+                             font-bold text-base transition-all active:scale-[0.97]
+                             ${isCompleted
+                      ? "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 border border-zinc-700/50"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"}`}
+                >
+                  {isCompleted ? t("workoutCompleted") : t("startWorkout")}
+                </button>
+              </Link>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

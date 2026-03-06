@@ -17,6 +17,7 @@
         "loading": "Loading routines...",
         "exercises": "exercises",
         "startWorkout": "🚀 Start Workout",
+        "workoutCompleted": "✅ Workout Completed",
         "rest": "rest"
     },
     "workout": {
@@ -70,9 +71,14 @@
         "save": "Save",
         "cancel": "Cancel",
         "delete": "Delete",
+        "edit": "Edit",
         "deleteConfirm": "Are you sure you want to delete this routine?",
         "noExercises": "Add at least one exercise",
-        "removeExercise": "Remove"
+        "removeExercise": "Remove",
+        "uploadFile": "📎 Upload File",
+        "orPasteUrl": "or paste a URL",
+        "uploading": "Uploading...",
+        "preview": "Preview"
     },
     "history": {
         "title": "Workout History",
@@ -88,6 +94,14 @@
         "reps": "reps",
         "kg": "kg",
         "details": "Details",
-        "loading": "Loading history..."
+        "loading": "Loading history...",
+        "monthly": "Monthly",
+        "weekly": "Weekly",
+        "daily": "Daily",
+        "today": "Today",
+        "showAll": "Show all",
+        "noWorkoutsOnDate": "No workouts on this date",
+        "workoutSingular": "workout",
+        "workoutPlural": "workouts"
     }
 }
