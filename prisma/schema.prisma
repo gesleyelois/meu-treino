@@ -16,6 +16,17 @@ model AppUser {
   @@map("app_users")
 }
 
+model MuscleGroup {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  category  String?    // e.g. "Pernas", "Braços" — parent grouping
+  order     Int        @default(0)
+  exercises Exercise[]
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  @@map("muscle_groups")
+}
+
 model WorkoutSplit {
   id          String            @id @default(cuid())
   userId      String            @map("user_id")
@@ -30,13 +41,15 @@ model WorkoutSplit {
 }
 
 model Exercise {
-  id          String            @id @default(cuid())
-  name        String
-  muscleGroup String            @map("muscle_group")
-  mediaUrl    String?           @map("media_url")
-  workouts    WorkoutExercise[]
-  logs        ExerciseLog[]
-  createdAt   DateTime          @default(now()) @map("created_at")
+  id             String            @id @default(cuid())
+  name           String
+  muscleGroup    String            @map("muscle_group")
+  muscleGroupId  String?           @map("muscle_group_id")
+  muscleGroupRel MuscleGroup?      @relation(fields: [muscleGroupId], references: [id])
+  mediaUrl       String?           @map("media_url")
+  workouts       WorkoutExercise[]
+  logs           ExerciseLog[]
+  createdAt      DateTime          @default(now()) @map("created_at")
 
   @@map("exercises")
 }
