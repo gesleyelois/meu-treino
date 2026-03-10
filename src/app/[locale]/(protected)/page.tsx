@@ -6,17 +6,9 @@ import { refreshCatalog, syncPendingLogs, registerSyncOnReconnect } from "@/lib/
 import { type CatalogSplit } from "@/lib/db";
 import SyncBadge from "@/components/SyncBadge";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
+import ExerciseThumb from "@/components/ExerciseThumb";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
-const MUSCLE_ICONS: Record<string, string> = {
-  Quadríceps: "🦵",
-  Peitoral: "💪",
-  Posterior: "🏋️",
-  Deltóides: "🤸",
-  Costas: "🔙",
-  default: "🏋️",
-};
 
 export default function Home() {
   const t = useTranslations("home");
@@ -151,9 +143,7 @@ export default function Home() {
                     key={we.id}
                     className="flex items-center gap-3 bg-zinc-800/50 rounded-lg px-3 py-2.5"
                   >
-                    <span className="text-lg">
-                      {MUSCLE_ICONS[we.exercise.muscleGroup] || MUSCLE_ICONS.default}
-                    </span>
+                    <ExerciseThumb mediaUrl={we.exercise.mediaUrl} name={we.exercise.name} size={40} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-zinc-200 truncate">
                         {we.exercise.name}

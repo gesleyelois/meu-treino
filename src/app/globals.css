@@ -83,3 +83,13 @@ body {
 .animate-pulse-dot {
   animation: pulse-dot 2s ease-in-out infinite;
 }
+
+/* ── Exercise Thumbnail (mini media preview) ─────────────────── */
+.exercise-thumb {
+  transition: transform 0.2s ease;
+}
+
+.exercise-thumb--default {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.1), rgba(5, 150, 105, 0.15));
+  border: 1px solid rgba(52, 211, 153, 0.15);
+}
