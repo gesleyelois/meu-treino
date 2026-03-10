@@ -9,6 +9,7 @@ export async function GET() {
     try {
         const exercises = await prisma.exercise.findMany({
             orderBy: { name: "asc" },
+            include: { muscleGroupRel: true }
         });
         return NextResponse.json(exercises);
     } catch (error) {
@@ -27,16 +28,26 @@ export async function POST(request: Request) {
 
     try {
         const body = await request.json();
-        const { name, muscleGroup, mediaUrl } = body;
+        const { name, muscleGroupId, mediaUrl } = body;
 
-        if (!name || !muscleGroup) {
-            return NextResponse.json({ error: "Name and muscleGroup are required" }, { status: 400 });
+        let muscleGroup = body.muscleGroup;
+
+        if (!name || (!muscleGroupId && !muscleGroup)) {
+            return NextResponse.json({ error: "Name and muscleGroupId are required" }, { status: 400 });
+        }
+
+        if (muscleGroupId) {
+            const mg = await prisma.muscleGroup.findUnique({ where: { id: muscleGroupId } });
+            if (mg) {
+                muscleGroup = mg.name;
+            }
         }
 
         const exercise = await prisma.exercise.create({
             data: {
                 name,
-                muscleGroup,
+                muscleGroup: muscleGroup || "Desconhecido",
+                muscleGroupId: muscleGroupId || null,
                 mediaUrl: mediaUrl || null,
             },
         });

@@ -45,17 +45,27 @@ export async function PUT(
 
     try {
         const body = await request.json();
-        const { name, muscleGroup, mediaUrl } = body;
+        const { name, muscleGroupId, mediaUrl } = body;
 
-        if (!name || !muscleGroup) {
+        let muscleGroup = body.muscleGroup;
+
+        if (!name || (!muscleGroupId && !muscleGroup)) {
             return NextResponse.json({ error: "Name and muscleGroup are required" }, { status: 400 });
+        }
+
+        if (muscleGroupId) {
+            const mg = await prisma.muscleGroup.findUnique({ where: { id: muscleGroupId } });
+            if (mg) {
+                muscleGroup = mg.name;
+            }
         }
 
         const exercise = await prisma.exercise.update({
             where: { id },
             data: {
                 name,
-                muscleGroup,
+                muscleGroup: muscleGroup || "Desconhecido",
+                muscleGroupId: muscleGroupId || null,
                 mediaUrl: mediaUrl || null,
             },
         });

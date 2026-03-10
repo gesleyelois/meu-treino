@@ -250,7 +250,7 @@ export default function ManagePage() {
                                         className="w-full h-10 bg-zinc-800 border border-zinc-700 rounded-lg px-3 mb-4 text-sm text-zinc-100 
                                                    focus:outline-none focus:border-emerald-600 appearance-none"
                                     >
-                                        <option value="" disabled>Selecione um exercício do catálogo...</option>
+                                        <option value="" disabled>Selecione um exercício...</option>
                                         {catalogExercises.map(cat => (
                                             <option key={cat.id} value={cat.id}>{cat.name} ({cat.muscleGroup})</option>
                                         ))}

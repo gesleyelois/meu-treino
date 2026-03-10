@@ -1,20 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { type Exercise } from "@prisma/client";
+import { type Exercise, type MuscleGroup } from "@prisma/client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import ConfirmModal from "@/components/ConfirmModal";
 
 export default function AdminExercisesPage() {
-    const [exercises, setExercises] = useState<Exercise[]>([]);
+    const [exercises, setExercises] = useState<any[]>([]);
+    const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [activeTab, setActiveTab] = useState<string>("all");
 
     // Form State
     const [editingId, setEditingId] = useState<string | null>(null);
     const [name, setName] = useState("");
-    const [muscleGroup, setMuscleGroup] = useState("");
+    const [muscleGroupId, setMuscleGroupId] = useState("");
     const [mediaUrl, setMediaUrl] = useState("");
     const [mediaFile, setMediaFile] = useState<File | null>(null);
     const [error, setError] = useState("");
@@ -28,20 +30,31 @@ export default function AdminExercisesPage() {
     const locale = pathname.split("/")[1] || "pt-BR";
 
     useEffect(() => {
-        fetchExercises();
+        fetchInitialData();
     }, []);
 
-    const fetchExercises = async () => {
+    const fetchInitialData = async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/admin/exercises");
-            if (!res.ok) throw new Error("Failed to fetch");
-            const data = await res.json();
-            setExercises(data);
+            const [exRes, mgRes] = await Promise.all([
+                fetch("/api/admin/exercises"),
+                fetch("/api/admin/muscle-groups")
+            ]);
+            if (exRes.ok) setExercises(await exRes.json());
+            if (mgRes.ok) setMuscleGroups(await mgRes.json());
         } catch (e) {
             console.error(e);
         }
         setLoading(false);
+    };
+
+    const fetchExercises = async () => {
+        try {
+            const res = await fetch("/api/admin/exercises");
+            if (res.ok) setExercises(await res.json());
+        } catch (e) {
+            console.error(e);
+        }
     };
 
     const uploadFile = async (file: File): Promise<string> => {
@@ -81,7 +94,7 @@ export default function AdminExercisesPage() {
             const res = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, muscleGroup, mediaUrl: finalMediaUrl }),
+                body: JSON.stringify({ name, muscleGroupId, mediaUrl: finalMediaUrl }),
             });
 
             if (!res.ok) {
@@ -100,16 +113,16 @@ export default function AdminExercisesPage() {
     const resetForm = () => {
         setEditingId(null);
         setName("");
-        setMuscleGroup("");
+        setMuscleGroupId("");
         setMediaUrl("");
         setMediaFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
-    const handleEdit = (ex: Exercise) => {
+    const handleEdit = (ex: any) => {
         setEditingId(ex.id);
         setName(ex.name);
-        setMuscleGroup(ex.muscleGroup);
+        setMuscleGroupId(ex.muscleGroupId || "");
         setMediaUrl(ex.mediaUrl || "");
         setMediaFile(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
@@ -144,11 +157,15 @@ export default function AdminExercisesPage() {
         setSaving(false);
     };
 
+    const filteredExercises = activeTab === "all" 
+        ? exercises 
+        : exercises.filter(ex => ex.muscleGroupId === activeTab);
+
     return (
         <div className="p-4 max-w-lg mx-auto">
             <header className="mb-6 flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold">Admin: Catálogo</h1>
+                    <h1 className="text-2xl font-bold">Admin: Exercícios</h1>
                     <p className="text-zinc-400 text-sm">Gerencie os exercícios base</p>
                 </div>
                 <Link href={`/${locale}`} className="text-sm bg-zinc-800 px-3 py-1.5 rounded-lg text-zinc-300">
@@ -186,14 +203,17 @@ export default function AdminExercisesPage() {
                     </div>
                     <div>
                         <label className="block text-xs text-zinc-400 mb-1">Grupo Muscular</label>
-                        <input
+                        <select
                             required
-                            type="text"
-                            value={muscleGroup}
-                            onChange={e => setMuscleGroup(e.target.value)}
-                            placeholder="Ex: Peitoral"
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"
-                        />
+                            value={muscleGroupId}
+                            onChange={e => setMuscleGroupId(e.target.value)}
+                            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 appearance-none"
+                        >
+                            <option value="" disabled>Selecione um grupo muscular...</option>
+                            {muscleGroups.map(mg => (
+                                <option key={mg.id} value={mg.id}>{mg.category ? `${mg.category} - ${mg.name}` : mg.name}</option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* Media Setup */}
@@ -253,25 +273,57 @@ export default function AdminExercisesPage() {
 
                     <button
                         type="submit"
-                        disabled={saving || !name || !muscleGroup}
+                        disabled={saving || !name || !muscleGroupId}
                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 rounded-lg transition-colors text-sm disabled:opacity-50 flex items-center justify-center h-10"
                     >
                         {saving ? (
                             <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                        ) : editingId ? "Salvar Alterações" : "Adicionar ao Catálogo"}
+                        ) : editingId ? "Salvar Alterações" : "Adicionar Exercício"}
                     </button>
                 </div>
             </form>
 
             <div>
-                <h2 className="text-lg font-semibold mb-3">Catálogo Atual ({exercises.length})</h2>
+                <h2 className="text-lg font-semibold mb-3">Exercícios ({filteredExercises.length})</h2>
+                
+                {/* Horizontal scrollable tabs */}
+                <div className="flex overflow-x-auto gap-2 pb-2 mb-4 scrollbar-hide">
+                    <button
+                        onClick={() => setActiveTab("all")}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                            activeTab === "all" 
+                                ? "bg-emerald-600 text-white" 
+                                : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300"
+                        }`}
+                    >
+                        Todos
+                    </button>
+                    {muscleGroups.map(mg => (
+                        <button
+                            key={mg.id}
+                            onClick={() => setActiveTab(mg.id)}
+                            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                                activeTab === mg.id
+                                    ? "bg-emerald-600 text-white" 
+                                    : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300"
+                            }`}
+                        >
+                            {mg.name}
+                        </button>
+                    ))}
+                </div>
+
                 {loading ? (
                     <div className="flex justify-center py-4">
                         <div className="w-5 h-5 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
                     </div>
+                ) : filteredExercises.length === 0 ? (
+                    <div className="text-center py-8">
+                        <p className="text-zinc-500 text-sm">Nenhum exercício encontrado.</p>
+                    </div>
                 ) : (
                     <ul className="space-y-2">
-                        {exercises.map(ex => (
+                        {filteredExercises.map(ex => (
                             <li key={ex.id} className="bg-zinc-900 border border-zinc-800 rounded-lg p-3 flex justify-between items-center">
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
@@ -280,7 +332,7 @@ export default function AdminExercisesPage() {
                                             <span className="bg-zinc-800 text-[10px] text-zinc-400 px-1.5 py-0.5 rounded">Mídia</span>
                                         )}
                                     </div>
-                                    <p className="text-xs text-zinc-500">{ex.muscleGroup}</p>
+                                    <p className="text-xs text-zinc-500">{ex.muscleGroupRel ? ex.muscleGroupRel.name : ex.muscleGroup}</p>
                                 </div>
 
                                 <div className="flex items-center gap-2">
@@ -305,7 +357,7 @@ export default function AdminExercisesPage() {
             <ConfirmModal
                 isOpen={deleteModalOpen}
                 title="Excluir Exercício"
-                message="Tem certeza que deseja remover este exercício do catálogo? Se ele estiver sendo utilizado em algum treino de usuário, não poderá ser excluído."
+                message="Tem certeza que deseja remover este exercício? Se ele estiver sendo utilizado em algum treino de usuário, não poderá ser excluído."
                 confirmText="Excluir"
                 cancelText="Cancelar"
                 onConfirm={() => {
