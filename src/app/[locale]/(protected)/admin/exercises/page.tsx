@@ -20,11 +20,15 @@ export default function AdminExercisesPage() {
     const [mediaUrl, setMediaUrl] = useState("");
     const [mediaFile, setMediaFile] = useState<File | null>(null);
     const [error, setError] = useState("");
+    const [importing, setImporting] = useState(false);
+    const [importResult, setImportResult] = useState<string>("");
+    const [jsonImportText, setJsonImportText] = useState("");
 
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [exerciseToDelete, setExerciseToDelete] = useState<string | null>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const importFileInputRef = useRef<HTMLInputElement>(null);
 
     const pathname = usePathname();
     const locale = pathname.split("/")[1] || "pt-BR";
@@ -157,6 +161,60 @@ export default function AdminExercisesPage() {
         setSaving(false);
     };
 
+    const handleImportPayload = async (payload: unknown) => {
+        setError("");
+        setImportResult("");
+        setImporting(true);
+
+        try {
+            const exercisesPayload = Array.isArray(payload) ? payload : (payload as any)?.exercises;
+
+            if (!Array.isArray(exercisesPayload) || exercisesPayload.length === 0) {
+                throw new Error("JSON inválido. Envie um array de exercícios ou { exercises: [...] }.");
+            }
+
+            const res = await fetch("/api/admin/exercises", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ exercises: exercisesPayload }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || "Falha ao importar exercícios.");
+            }
+
+            setImportResult(`Importação concluída: ${data.imported} importado(s), ${data.failed} com falha.`);
+            fetchExercises();
+        } catch (err: any) {
+            setError(err.message || "Erro ao importar JSON.");
+        } finally {
+            setImporting(false);
+        }
+    };
+
+    const handleImportJson = async (file?: File | null) => {
+        if (!file) return;
+
+        try {
+            const raw = await file.text();
+            const parsed = JSON.parse(raw);
+            await handleImportPayload(parsed);
+        } finally {
+            if (importFileInputRef.current) importFileInputRef.current.value = "";
+        }
+    };
+
+    const handleImportFromText = async () => {
+        if (!jsonImportText.trim()) return;
+        try {
+            const parsed = JSON.parse(jsonImportText);
+            await handleImportPayload(parsed);
+        } catch {
+            setError("JSON inválido no campo de texto.");
+        }
+    };
+
     const filteredExercises = activeTab === "all" 
         ? exercises 
         : exercises.filter(ex => ex.muscleGroupId === activeTab);
@@ -282,6 +340,70 @@ export default function AdminExercisesPage() {
                     </button>
                 </div>
             </form>
+
+            <section className="mb-8 bg-zinc-900 border border-zinc-800 p-4 rounded-xl">
+                <h2 className="text-lg font-semibold mb-1">Importar exercícios (JSON)</h2>
+                <p className="text-xs text-zinc-400 mb-3">
+                    Formatos aceitos: array direto ou objeto no formato {"{ exercises: [...] }"}.
+                </p>
+                <p className="text-xs text-zinc-500 mb-3">
+                    Cada item deve ter <code className="text-zinc-300">name</code> e <code className="text-zinc-300">muscleGroupId</code> (ou <code className="text-zinc-300">muscleGroup</code>), opcionalmente <code className="text-zinc-300">mediaUrl</code>.
+                </p>
+
+                {importResult && (
+                    <div className="mb-3 p-2 bg-emerald-950/50 border border-emerald-900 rounded-lg text-emerald-400 text-sm">
+                        {importResult}
+                    </div>
+                )}
+
+                <input
+                    ref={importFileInputRef}
+                    type="file"
+                    accept="application/json,.json"
+                    onChange={(e) => handleImportJson(e.target.files?.[0])}
+                    disabled={importing || saving}
+                    className="w-full text-xs text-zinc-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-zinc-800 file:text-zinc-300 hover:file:bg-zinc-700 hover:file:cursor-pointer transition-all disabled:opacity-60"
+                />
+                <textarea
+                    value={jsonImportText}
+                    onChange={(e) => setJsonImportText(e.target.value)}
+                    rows={10}
+                    disabled={importing || saving}
+                    placeholder={`{
+  "exercises": [
+    {
+      "name": "Supino Reto com Barra",
+      "muscleGroupId": "cm123abc456def789ghi012jk",
+      "mediaUrl": "https://cdn.exemplo.com/exercicios/supino-reto.mp4"
+    },
+    {
+      "name": "Elevação Lateral com Halteres",
+      "muscleGroup": "Ombros",
+      "mediaUrl": "https://cdn.exemplo.com/exercicios/elevacao-lateral.gif"
+    },
+    {
+      "name": "Agachamento Livre",
+      "muscleGroup": "Pernas"
+    }
+  ]
+}`}
+                    className="mt-3 w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono text-zinc-300 focus:outline-none focus:border-emerald-500"
+                />
+                <button
+                    type="button"
+                    onClick={handleImportFromText}
+                    disabled={importing || saving || !jsonImportText.trim()}
+                    className="mt-3 w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-medium py-2 rounded-lg transition-colors text-sm disabled:opacity-50"
+                >
+                    Importar JSON colado
+                </button>
+                {importing && (
+                    <div className="mt-3 flex items-center gap-2 text-xs text-zinc-400">
+                        <span className="w-3.5 h-3.5 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin"></span>
+                        Importando...
+                    </div>
+                )}
+            </section>
 
             <div>
                 <h2 className="text-lg font-semibold mb-3">Exercícios ({filteredExercises.length})</h2>
