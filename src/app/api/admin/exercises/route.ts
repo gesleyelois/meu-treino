@@ -52,22 +52,56 @@ export async function POST(request: Request) {
                 }
 
                 try {
-                    let resolvedMuscleGroup = item.muscleGroup || undefined;
+                    const normalizedName = item.name.trim();
+                    const existingExercise = await prisma.exercise.findFirst({
+                        where: {
+                            name: {
+                                equals: normalizedName,
+                                mode: "insensitive",
+                            },
+                        },
+                        select: { id: true },
+                    });
 
-                    if (item.muscleGroupId) {
-                        const mg = await prisma.muscleGroup.findUnique({ where: { id: item.muscleGroupId } });
+                    if (existingExercise) {
+                        failed.push({ index, reason: `exercise already exists: ${normalizedName}` });
+                        continue;
+                    }
+
+                    let resolvedMuscleGroup = item.muscleGroup?.trim() || undefined;
+                    let resolvedMuscleGroupId = item.muscleGroupId || null;
+
+                    if (resolvedMuscleGroupId) {
+                        const mg = await prisma.muscleGroup.findUnique({ where: { id: resolvedMuscleGroupId } });
                         if (!mg) {
-                            failed.push({ index, reason: `muscleGroupId not found: ${item.muscleGroupId}` });
+                            failed.push({ index, reason: `muscleGroupId not found: ${resolvedMuscleGroupId}` });
                             continue;
                         }
                         resolvedMuscleGroup = mg.name;
+                    } else if (resolvedMuscleGroup) {
+                        const mgByName = await prisma.muscleGroup.findFirst({
+                            where: {
+                                name: {
+                                    equals: resolvedMuscleGroup,
+                                    mode: "insensitive",
+                                },
+                            },
+                        });
+
+                        if (!mgByName) {
+                            failed.push({ index, reason: `muscleGroup not found: ${resolvedMuscleGroup}` });
+                            continue;
+                        }
+
+                        resolvedMuscleGroupId = mgByName.id;
+                        resolvedMuscleGroup = mgByName.name;
                     }
 
                     const exercise = await prisma.exercise.create({
                         data: {
-                            name: item.name,
+                            name: normalizedName,
                             muscleGroup: resolvedMuscleGroup || "Desconhecido",
-                            muscleGroupId: item.muscleGroupId || null,
+                            muscleGroupId: resolvedMuscleGroupId,
                             mediaUrl: item.mediaUrl || null,
                         },
                         select: { id: true, name: true },
